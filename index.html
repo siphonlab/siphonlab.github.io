@@ -1,6 +1,577 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ago Programming Language — Function is Class, CallFrame is Instance</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --fg: #c9d1d9;
+    --accent: #58a6ff;
+    --muted: #8b949e;
+    --card: #161b22;
+    --border: #30363d;
+    --code-bg: #1c2128;
+    --green: #3fb950;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.7;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 80px 20px 60px;
+    background: linear-gradient(180deg, #161b22 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .tagline {
+    font-size: 1.35rem;
+    color: var(--muted);
+    max-width: 700px;
+    margin: 0 auto 24px;
+  }
+  .hero .badge-pill {
+    display: inline-block;
+    background: rgba(88,166,255,.12);
+    color: var(--accent);
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: .9rem;
+    margin-bottom: 20px;
+  }
+  .hero .cta {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 10px 26px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: .95rem;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; border:none; }
+  .btn-outline { border: 1px solid var(--border); color: var(--fg); background:transparent; }
+
+  /* Container */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* Section */
+  section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+  h2 { font-size: 1.7rem; margin-bottom: 20px; color: #fff; }
+  h3 { font-size: 1.25rem; margin: 28px 0 12px; color: #fff; }
+  p { margin-bottom: 14px; }
+
+  /* Bootstrap Tabs override for dark theme */
+  .nav-tabs { border-bottom: 1px solid var(--border); gap: 4px; }
+  .nav-tabs .nav-link {
+    color: var(--muted);
+    border: 1px solid transparent;
+    border-radius: 6px 6px 0 0;
+    font-size: .9rem;
+    padding: 8px 18px;
+    transition: color .15s, background .15s;
+  }
+  .nav-tabs .nav-link:hover { color: var(--fg); background: rgba(255,255,255,.04); }
+  .nav-tabs .nav-link.active {
+    color: var(--accent);
+    background: var(--bg);
+    border-color: var(--border) var(--border) transparent;
+    font-weight: 600;
+  }
+  .tab-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 24px;
+  }
+
+  /* Code */
+  pre, code {
+    background: var(--code-bg);
+    border-radius: 6px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: .88rem;
+  }
+  pre {
+    padding: 16px;
+    overflow-x: auto;
+    margin: 0;
+    border: none;
+    border-radius: 6px;
+  }
+  :not(pre) > code {
+    padding: 2px 6px;
+    font-size: .85em;
+  }
+
+  /* Syntax highlighting tokens */
+  .hl-kw   { color: #ff7b72; font-weight: 500; }       /* keywords */
+  .hl-type { color: #79c0ff; }                          /* types / classes */
+  .hl-str  { color: #a5d6ff; }                          /* strings */
+  .hl-num  { color: #79c0ff; }                          /* numbers */
+  .hl-cmt  { color: #484f58; font-style: italic; }     /* comments */
+  .hl-fn   { color: #d2a8ff; }                          /* function names */
+  .hl-ann  { color: #ffa657; }                          /* annotations / decorators */
+  .hl-sql  { color: #7ee787; font-weight: 500; }       /* SQL keywords */
+  .hl-var  { color: #ffa657; }                          /* variables / params */
+  .hl-op   { color: #ff7b72; }                          /* operators */
+
+  /* Architecture diagram */
+  .arch {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    font-family: monospace;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.5;
+    margin: 20px 0;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: .92rem;
+  }
+  th, td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  th { background: var(--card); color: #fff; font-weight: 600; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: .85rem;
+  }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 2rem; }
+    .hero .tagline { font-size: 1.1rem; }
+    .nav-tabs .nav-link { padding: 6px 10px; font-size: .8rem; }
+  }
+</style>
+</head>
 <body>
-    <h1>Hello GitHub Pages</h1>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="badge-pill">Open OO Domain for Function &middot; Persistent &middot; Distributed</div>
+  <h1><span>ago</span> Programming Language</h1>
+  <p class="tagline"><strong>FUNCTION IS CLASS, and CALLFRAME IS INSTANCE</strong></p>
+  <p style="color:var(--muted); max-width:680px; margin:0 auto;">
+    ago is an object-oriented static programming language that treats functions as classes
+    and call frames as heap-based instances&mdash;enabling persistent, resumable actions in semantic.
+  </p>
+  <div class="cta">
+    <a class="btn btn-primary" href="https://github.com/siphonlab/ago"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#fff" style="vertical-align:middle;margin-right:6px;"><path d="M12 .5C5.37.5 0 5.78 0 12.29c0 5.21 3.43 9.64 8.2 11.21.6.11.82-.26.82-.57v-2.23c-3.34.72-4.04-1.41-4.04-1.41-.55-1.37-1.33-1.74-1.33-1.74-1.09-.73.08-.72.08-.72 1.2.09 1.84 1.22 1.84 1.22 1.07 1.8 2.8 1.28 3.49.98.11-.76.42-1.28.76-1.57-2.67-.3-5.47-1.31-5.47-5.84 0-1.29.47-2.34 1.23-3.17-.12-.3-.53-1.5.12-3.12 0 0 1-.32 3.3 1.21a11.5 11.5 0 016.02 0c2.28-1.53 3.29-1.21 3.29-1.21.66 1.62.25 2.82.13 3.12.77.83 1.23 1.88 1.23 3.17 0 4.54-2.81 5.53-5.49 5.83.43.36.81 1.1.81 2.22v3.29c0 .31.22.69.82.57C20.57 21.93 24 17.5 24 12.29 24 5.78 18.63.5 12 .5z"/></svg>View on GitHub</a>
+    <a class="btn btn-outline" href="#getting-started">Get Started</a>
+    <a class="btn btn-outline" href="https://doi.org/10.5281/zenodo.20919493">Read the Paper</a>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- Overview -->
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    Inspired by Process Philosophy, ago believes that real-world "actions" should have a complete lifecycle state&mdash;containing both start and end points as well as intermediate processes. Traditional programming models bind the CallFrame to an underlying stack structure, making it invisible and far from the programmer. ago abstracts it as an object-oriented concept:
+  </p>
+  <ul style="margin:12px 0 12px 24px;">
+    <li><strong>FUNCTION IS CLASS</strong>&nbsp;&mdash; Functions become classes with lifecycle properties and method fields.</li>
+    <li><strong>CALLFRAME IS INSTANCE</strong>&nbsp;&mdash; CallFrames materialize as heap-based objects when functions are created and executed.</li>
+  </ul>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs" id="demoTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" id="workflow-tab" data-bs-toggle="tab" data-bs-target="#workflow" type="button" role="tab">Workflow</button></li>
+    <li class="nav-item"><button class="nav-link" id="conc-tab" data-bs-toggle="tab" data-bs-target="#conc" type="button" role="tab">Concurrency</button></li>
+    <li class="nav-item"><button class="nav-link" id="native-tab" data-bs-toggle="tab" data-bs-target="#native" type="button" role="tab">Native API</button></li>
+    <li class="nav-item"><button class="nav-link" id="entity-tab" data-bs-toggle="tab" data-bs-target="#entity" type="button" role="tab">Entity</button></li>
+    <li class="nav-item"><button class="nav-link" id="sql-tab" data-bs-toggle="tab" data-bs-target="#sql" type="button" role="tab">SQL Query</button></li>
+    <li class="nav-item"><button class="nav-link" id="gen-tab" data-bs-toggle="tab" data-bs-target="#gen" type="button" role="tab">Generator</button></li>
+  </ul>
+
+  <div class="tab-content" id="demoTabsContent">
+
+        <!-- Workflow -->
+    <div class="tab-pane fade active show" id="workflow" role="tabpanel">
+      <pre><code class="language-ago">// Migrates to "downloader" node at runtime
+fun downloadImages(images as LinkedList&lt;string&gt;) with RunAt::("downloader") {
+    for (var i = 0; i &lt; images.size(); ++i) {
+        var url = images[i];
+        Trace.print("downloading " + url);
+        downloadImage(url);
+    }
+}
+
+// Runs on "page" node
+fun runPage(page as int) as int with RunAt::("page") {
+    var result = fetchImages(page);
+    downloadImages(result.images);
+}</code></pre>
+</div>
+
+        <!-- Native API -->
+<div class="tab-pane fade" id="native" role="tabpanel">
+  Wrap native callback-style API to ago function.
+  <pre><code class="language-java">// In ago: sleep(2000)
+public static void sleep(
+NativeFrame nativeFrame, int ms) {
+
+var host = nativeFrame.getRunSpace()
+    .getRunSpaceHost();
+
+// Suspend the CallFrame
+nativeFrame.beginAsync();
+
+// Register callback; when fired,
+// RunSpace resumes automatically
+Object obj = host.setTimer(
+    ms, nativeFrame::finishVoidAsync);
+nativeFrame.setNativePayload(obj);
+}</code></pre>
+</div>
+
+    <!-- Entity -->
+    <div class="tab-pane fade show" id="entity" role="tabpanel">
+      Within custom EntityRunSpace, the Entity objects support ORM feature.
+      <pre><code class="language-ago">class User from Entity&lt;User, long&gt; {
+    metaclass{
+        class Name from VarChar::(100)
+        class Address from VarChar::(200)
+        class Age from BigInt
+    }
+    name as Name;
+    address as Address;
+    age as Age
+}
+
+fun createUser() as User {
+    var u = {User | name: "Tom", address: "liberation street 222", age: 20}
+    return u;
+}
+
+// Auto open transaction, save &amp; commit on exit
+var u = await createUser() via EntitySpace.new#();
+</code></pre>
+    </div>
+
+    <!-- SQL Query -->
+    <div class="tab-pane fade" id="sql" role="tabpanel">
+      <pre><code class="language-ago">// `query` is a special kind of function, 
+// the compiler automatically creates `userByName.Result` as typed result class
+query userByName(
+    name as string?,
+    minAge as int?,
+    maxAge as int?,
+    sort as Sort[]? = [Sort[] | new Sort('u.name', 'asc')]
+) {
+    sql{.
+        SELECT u.id, u.name, u.age FROM User u
+        WHERE name = :name AND age >= :minAge
+          AND age <= :maxAge
+        ORDER BY :sort ASC
+    .}
+}
+
+var it = await userByName('Tom', null, 30, default) via EntitySpace.new#();
+for(var item in it){
+    Trace.print(item.name)   // typed access
+}</code></pre>
+    </div>
+
+
+    <!-- Generator -->
+    <div class="tab-pane fade" id="gen" role="tabpanel">
+      Generator feature of ago is based on ordinally class hierachy, Generator function extends from Generator class, and Generator extends field <b>done</b> from Function class.
+      <pre><code class="language-ago">class Generator&lt;+R&gt; from Function&lt;R&gt;{
+    private done as boolean {public get;}
+}</code></pre>
+Usage:
+<pre><code class="language-ago">
+generator fun foo(n as int) as int{
+    for(var i=0; i&lt;n; i++){
+        yield i;
+    }
+}
+
+fun main(){
+    for(var i in foo(3)){
+        Trace.print(i);   // 0, 1, 2
+    }
+}</code></pre>
+    </div>
+
+    <!-- Concurrency -->
+    <div class="tab-pane fade" id="conc" role="tabpanel">
+      <pre><code class="language-ago">fun sum(){
+    fun subTask1(){ sleep(100); }
+    fun subTask2(){ sleep(200); }
+    fun subTask3(){ sleep(300); }
+
+    fork subTask1()
+    fork subTask2()
+    fork subTask3()   // auto-wait all done
+}
+
+fun main(){
+    var s = spawn sum()
+    sleep(100)
+    s.runspace.pause()  // pause all children
+    sleep(2000)
+    s.runspace.resume() // resume all
+}</code></pre>
+    </div>
+
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <h2>Features</h2>
+  <table>
+    <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Function = Class</strong></td><td>Every function derives from <code>Function&lt;R&gt;</code>; you can implement interfaces/traits, add fields.</td></tr>
+      <tr><td><strong>CallFrame = Instance</strong></td><td>Every invocation is an ordinary object on the heap &mdash; suspendable, serializable, interruptible.</td></tr>
+      <tr><td><strong>Meta-classes &amp; Parameterized Classes</strong></td><td>Embed constant values in types (e.g., <code>VarChar::(200)</code>).</td></tr>
+      <tr><td><strong>Scalarized ClassRefs</strong></td><td>Treat classes as first-class values via <code>classref</code>.</td></tr>
+      <tr><td><strong>Extended Boxing</strong></td><td>Boxing works on subclasses of <code>Boxer&lt;T&gt;</code>; syntax like <code>name as VarChar::(200) = 'John'</code> is allowed.</td></tr>
+      <tr><td><strong>Overloading at Invocation</strong></td><td>Use <code>f#1</code>, <code>f#2</code>&nbsp;&mdash; the compiler resolves at call time by argument types.</td></tr>
+      <tr><td><strong>Structured Concurrency</strong></td><td><code>fork</code>, <code>await</code>, <code>race()</code>, <code>awaitMany()</code>&nbsp;&mdash; all built on CallFrames.</td></tr>
+      <tr><td><strong>RunSpace Abstraction</strong></td><td>One RunSpace per "thread" of execution; backable by thread pools, event loops, or virtual threads.</td></tr>
+      <tr><td><strong>Persistence Hooks</strong></td><td>Implement <code>Slots</code> to store state in PostgreSQL JSON columns, NoSQL, or even a blockchain.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <h2>Architecture</h2>
+  <object data="ago-arch.svg" type="image/svg+xml" style="width:100%; max-width:600px; display:block; margin:20px auto;"></object>
+  <ul style="margin:16px 0 16px 24px;">
+    <li><strong>Instance</strong>&nbsp;&mdash; Base for all ago objects. Holds a reference to its class (<code>agoClass</code>) and a <code>Slots</code> implementation.</li>
+    <li><strong>AgoClass / MetaClass</strong>&nbsp;&mdash; Ordinary classes and meta-classes. Functions are subclasses of <code>AgoClass</code>.</li>
+    <li><strong>CallFrame</strong>&nbsp;&mdash; Runtime frame; stores local variables, program counter (<code>pc</code>), caller reference, etc.</li>
+    <li><strong>RunSpace</strong>&nbsp;&mdash; Owns the current call frame. When a function yields it changes state to <em>WAITING_RESULT</em>, freeing the thread.</li>
+  </ul>
+</section>
+
+<!-- Getting Started -->
+<section id="getting-started">
+  <h2>Getting Started</h2>
+  <h3>Prerequisites</h3>
+  <ul style="margin:8px 0 16px 24px;">
+    <li>JDK 22 or newer</li>
+    <li>Maven 3.6+ (for building from source)</li>
+  </ul>
+
+  <h3>Build</h3>
+  <pre><code class="language-bash">git clone https://github.com/siphonlab/ago.git
+cd ago
+mvn clean package -DskipTests</code></pre>
+
+  <h3>Run a Sample Program</h3>
+  <p>Create <code>hello.ago</code>:</p>
+  <pre><code class="language-ago">fun main(){
+    Trace.print("Hello, ago!")
+}</code></pre>
+  <p>Compile &amp; run:</p>
+  <pre><code class="language-bash"># compile
+java -cp path/to/ago-compiler/target/ago-compiler-&lt;ver&gt;.jar \
+  -agocp ago-sdk/lang.agopkg -i hello.ago
+
+# run
+java -jar path/to/ago-engine/target/ago-engine-1.0-SNAPSHOT.jar \
+  -agocp ago-sdk/lang.agopkg ./</code></pre>
+
+  <h3>Language Basics &mdash; Structured Concurrency</h3>
+  <pre><code class="language-ago">fun f(){
+    Trace.print('wait notify')
+    await                // yields control
+    Trace.print('resume f')
+    sleep(2000)
+}
+
+fun main(){
+    var c = fork f();   // start child RunSpace, get its CallFrame
+    sleep(2000);        // built-in native function (async)
+    c.notify();         // resume the child
+}</code></pre>
+
+  <h3>Meta-class &amp; Parameterized Class</h3>
+  <pre><code class="language-ago">class VarChar from String{
+    metaclass{
+        fun new(maxLength as int){}
+    }
+}
+class Person{
+    name as VarChar::(200)
+}
+fun main(){
+    var p = new Person()
+    p.name = 'John'         // extended boxing
+    Trace.print(p.name)    
+}</code></pre>
+
+  <h3>Function Overloading &amp; Attributes</h3>
+  <pre><code class="language-ago">fun f#1(i as int){}
+fun f#2(i as int, j as int){}
+
+class Person{
+    name as string
+    fun name#get as string{ return this.name }
+    fun name#set(name as string){ this.name = name }
+}</code></pre>
+</section>
+
+<!-- Contributing -->
+<section id="contributing">
+  <h2>Contributing</h2>
+  <p>
+    The ago language opens a new domain with many interesting areas to explore. We need help with compilers, game engines, workflow engines, low-code platforms, and LLM applications. The project is currently in the contributor sign-up phase &mdash; feel free to register via an issue on GitHub.
+  </p>
+
+</section>
+
+<!-- License -->
+<section id="license">
+  <h2>License</h2>
+  <p>ago is released under the <strong>Apache-2.0</strong> license.</p>
+  <p>For questions or support, open an issue on <a href="https://github.com/siphonlab/ago/issues">GitHub</a>.</p>
+</section>
+
+</div>
+
+<footer>
+  <p>&copy; 2025 SiphonLab &middot; ago Programming Language &middot; Apache-2.0</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ── Lightweight syntax highlighter for ago / java / sql ── */
+(function(){
+
+  // ── ago keywords & types ──
+  const agoKW = '\\b(fun|class|interface|query|generator|metaclass|from|with|as|var|new|return|for|in|if|else|while|yield|await|fork|spawn|via|default|null|true|false|this|override|public|private|protected|final|throw|throws)\\b';
+  const agoTypes = '\\b(int|long|string|boolean|byte|short|float|double|char|void|classref|Object|Function|Entity|BigInt|VarChar|Sort|Trace|Slots|RunSpace|CallFrame|AgoClass|MetaClass|LinkedList|ArrayList|AtomicBoolean)\\b';
+
+  // ── java keywords & types ──
+  const javaKW = '\\b(public|private|protected|static|final|class|interface|void|int|long|double|float|boolean|byte|short|char|new|return|for|while|if|else|switch|case|break|continue|throw|throws|try|catch|finally|extends|implements|import|package|this|super|null|true|false|var|enum|abstract|synchronized|volatile|transient|native|strictfp|assert)\\b';
+  const javaTypes = '\\b(Object|String|Integer|Long|Double|Float|Boolean|Byte|Short|Character|Void|List|Map|Set|ArrayList|HashMap|LinkedList|NativeFrame|RunSpaceHost)\\b';
+
+  // ── SQL keywords ──
+  const sqlKW = '\\b(SELECT|FROM|WHERE|AND|OR|ORDER|BY|ASC|DESC|INSERT|INTO|VALUES|UPDATE|SET|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|GROUP|HAVING|LIMIT|OFFSET|CREATE|TABLE|DROP|ALTER|INDEX|VIEW|AS|DISTINCT|IN|IS|NOT|NULL|EXISTS|BETWEEN|LIKE|UNION|ALL|ANY)\\b';
+
+  // ── Build combined patterns per language ──
+  const lang = {
+    ago: { kw: new RegExp(agoKW, 'gi'), types: new RegExp(agoTypes, 'gi'), sql: null },
+    java: { kw: new RegExp(javaKW, 'gi'), types: new RegExp(javaTypes, 'gi'), sql: null },
+    bash: null
+  };
+
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function highlight(code, langName) {
+    let text = esc(code);
+
+    // Comments (single-line // and /* */)
+    //text = text.replace(/(\/\/[^\n]*)/g, '<span class="hl-cmt">$1</span>');
+    //text = text.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="hl-cmt">$1</span>');
+
+    // Strings (double and single quoted)
+    text = text.replace(/(&quot;[^&]*?&quot;|"[^"]*"|'[^']*')/g, '<span class="hl-str">$1</span>');
+
+    if(langName === 'ago'){
+      // SQL inside sql{. ... .} blocks
+      text = text.replace(/(sql\s*\{\.)([\s\S]*?)(\.})/g, function(m, open, body, close){
+        let highlighted = body.replace(sqlKW, '<span class="hl-sql">$1</span>');
+        return open + highlighted + close;
+      });
+      // ago keywords (outside already-highlighted spans)
+      text = applyOutsideSpans(text, lang.ago.kw, 'hl-kw');
+      // ago types
+      text = applyOutsideSpans(text, lang.ago.types, 'hl-type');
+    }
+
+    if(langName === 'java'){
+      text = applyOutsideSpans(text, lang.java.kw, 'hl-kw');
+      text = applyOutsideSpans(text, lang.java.types, 'hl-type');
+    }
+
+    // Numbers
+    text = text.replace(/\b(\d+\.?\d*)\b/g, function(m){
+      if(m[0]==='0' && m.length>1) return '<span class="hl-num">'+m+'</span>';
+      return '<span class="hl-num">'+m+'</span>';
+    });
+
+    return text;
+  }
+
+  // Apply regex only to parts NOT already inside <span> tags
+  function applyOutsideSpans(html, regex, cls){
+    let result = '';
+    let inTag = false;
+    let buf = '';
+    for(let i=0; i<html.length; i++){
+      if(html[i]==='<'){ inTag=true; buf+=html[i]; continue; }
+      if(inTag){ buf+=html[i]; if(html[i]==='>'){inTag=false;} continue; }
+      // outside a tag, try to match
+      regex.lastIndex = 0;
+    }
+    // Simpler approach: split by <span...>...</span>, only transform plain parts
+    let parts = html.split(/(<span[^>]*>[\s\S]*?<\/span>)/g);
+    return parts.map(function(part){
+      if(/^<span/.test(part)) return part;  // already highlighted span, skip
+      return part.replace(regex, '<span class="'+cls+'">$1</span>');
+    }).join('');
+  }
+
+  // Process all code blocks
+  document.querySelectorAll('pre code').forEach(function(block){
+    let langName = '';
+    block.classList.forEach(function(c){
+      if(/^language-/.test(c)) langName = c.replace('language-','');
+    });
+    if(!langName) return;
+    let raw = block.textContent;
+    block.innerHTML = highlight(raw, langName);
+  });
+
+})();
+</script>
+
 </body>
 </html>
