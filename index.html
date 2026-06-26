@@ -256,22 +256,24 @@ fun runPage(page as int) as int with RunAt::("page") {
         <!-- Native API -->
 <div class="tab-pane fade" id="native" role="tabpanel">
   Wrap native callback-style API to ago function.
-  <pre><code class="language-java">// In ago: sleep(2000)
+  <pre><code class="language-java">// backend Java code
 public static void sleep(
 NativeFrame nativeFrame, int ms) {
 
-var host = nativeFrame.getRunSpace()
-    .getRunSpaceHost();
+  var host = nativeFrame.getRunSpace().getRunSpaceHost();
 
-// Suspend the CallFrame
-nativeFrame.beginAsync();
+  // Suspend the CallFrame
+  nativeFrame.beginAsync();
 
-// Register callback; when fired,
-// RunSpace resumes automatically
-Object obj = host.setTimer(
-    ms, nativeFrame::finishVoidAsync);
-nativeFrame.setNativePayload(obj);
+  // Register callback; when fired,
+  // RunSpace resumes automatically
+  Object obj = host.setTimer(ms, nativeFrame::finishVoidAsync);
+  nativeFrame.setNativePayload(obj);
 }</code></pre>
+in ago:
+<pre><code class="language-ago">
+  sleep(2000)
+</code></pre>
 </div>
 
     <!-- Entity -->
