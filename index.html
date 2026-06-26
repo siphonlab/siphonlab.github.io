@@ -257,9 +257,7 @@ fun runPage(page as int) as int with RunAt::("page") {
 <div class="tab-pane fade" id="native" role="tabpanel">
   Wrap native callback-style API to ago function.
   <pre><code class="language-java">// backend Java code
-public static void sleep(
-NativeFrame nativeFrame, int ms) {
-
+public static void sleep(NativeFrame nativeFrame, int ms) {
   var host = nativeFrame.getRunSpace().getRunSpaceHost();
 
   // Suspend the CallFrame
