@@ -237,7 +237,13 @@
 
         <!-- Workflow -->
     <div class="tab-pane fade active show" id="workflow" role="tabpanel">
-      <pre><code class="language-ago">// Migrates to "downloader" node at runtime
+      <pre><code class="language-ago">// Runs on "page" node
+fun runPage(page as int) as int with RunAt::("page") {
+    var result = fetchImages(page);
+    downloadImages(result.images);
+}
+
+// Migrates to "downloader" node at runtime
 fun downloadImages(images as LinkedList&lt;string&gt;) with RunAt::("downloader") {
     for (var i = 0; i &lt; images.size(); ++i) {
         var url = images[i];
@@ -245,12 +251,7 @@ fun downloadImages(images as LinkedList&lt;string&gt;) with RunAt::("downloader"
         downloadImage(url);
     }
 }
-
-// Runs on "page" node
-fun runPage(page as int) as int with RunAt::("page") {
-    var result = fetchImages(page);
-    downloadImages(result.images);
-}</code></pre>
+</code></pre>
 </div>
 
         <!-- Native API -->
